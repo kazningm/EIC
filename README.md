@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # EBAGUL INNVEST BOT
+=======
+# EBAGUL INVEST BOT
+>>>>>>> 3dea54a0c44256edbffff0e5279257e559de5579
 ### developer: ebagul invest corporation
 ![Image Ebagul Leo](https://shahty.ru/netcat_files/705/619/h_97f9c7cb85fb20aeea2d7a356921d0b7)
 
