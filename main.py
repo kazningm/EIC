@@ -33,6 +33,8 @@ def inv(count: float = 0, price_in: float = 0, price_out: float = 0) -> float:
 @bot.message_handler(content_types=['text'])
 def send(message):
     try:
+        # подсчет прибыли или убытка при вводе 3х чисел:
+        # (кол-во акций, цена покупки, цена продажи)
         if len(message.text.split()) == 3:
             count, price_in, price_out = list(map(float, message.text.replace(',', '.').split()))
             result = round(inv(count, price_in, price_out), 3)
@@ -46,6 +48,20 @@ def send(message):
                                  text='Прибыль при игре на понижении: <b>' + str(abs(result)) + '</b>\n'
                                       'Убыток при пониженной цене: <b>' + str(lose_money) + '</b>\n',
                                  parse_mode='html')
+        # подсчет размера комиссии при вводе двух числе:
+        # (кол-во акций, цена акции)
+        elif len(message.text.split()) == 2:
+            count, price = list(map(float, message.text.replace(',', '.').split()))
+            result = round(count * price, 3)
+            kom = round(count * price * 0.003, 3)
+            bot.send_message(chat_id=message.chat.id,
+                             text='Стоимость акций: <b>{0}</b> \n'
+                                  'Комиссия за сделку: <b>{1}</b>\n'
+                                  'Итого: <b>{0} + {1} = {2}</b>'.format(str(result), str(kom), str(result+kom)),
+                             parse_mode='html')
+        # ввод одного числа
+        # 1) перевод долларов в рубли
+        # 2) расчет стоимости продажи акции чтобы выйти в 0
         elif len(message.text.split()) == 1:
             if '$' in message.text:
                 usd = float(ExchangeRates(date.today())['USD'].value)
@@ -109,6 +125,22 @@ def send_query(query):
                     thumb_width=48
                 )
                 bot.answer_inline_query(inline_query_id=query.id, results=[game_down, game_lose])
+        elif len(query.query.split() == 2):
+            count, price = list(map(float, query.query.replace(',', '.').split()))
+            result = round(count * price, 3)
+            kom = round(count * price * 0.003, 3)
+            r = types.InlineQueryResultArticle(
+                id = 'kom',
+                title='Сделка',
+                input_message_content=types.InputTextMessageContent(query.query),
+                description='Стоимость акций: <b>{0}</b> \n'
+                            'Комиссия за сделку: <b>{1}</b>\n'
+                            'Итого: <b>{0} + {1} = {2}</b>'.format(str(result), str(kom), str(result+kom)),
+                thumb_url=wolf_khm,
+                thumb_height=48,
+                thumb_width=48
+            )
+            bot.answer_inline_query(inline_query_id=query.id, results=[r])
         elif len(query.query.split()) == 1:
             if '$' in query.query:
                 usd = float(ExchangeRates(date.today())['USD'].value)
