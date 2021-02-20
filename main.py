@@ -42,7 +42,8 @@ def send(message):
             kom = round(count * price * 0.003, 3)
             bot.send_message(chat_id=message.chat.id,
                              text='Стоимость акций: <b>{0}</b> \n'
-                                  'Комиссия за сделку: <b>{1}</b>'.format(str(result), str(kom)),
+                                  'Комиссия за сделку: <b>{1}</b> \n'
+                                  'Итого: <b>{2}</b>'.format(str(result), str(kom), str(result+kom)),
                              parse_mode='html')
         # ввод одного числа
         # 1) перевод долларов в рубли
@@ -64,17 +65,15 @@ def send(message):
                                       ' на понижении: <b>{2} ({3} %)</b>'.format(new_price_long, round(new_price_long * 100 / price_in - 100, 3),
                                                                                  new_price_short, round(new_price_short * 100 / price_in - 100, 3)),
                                  parse_mode='html')
-        #
+        # ввод трех чисел
+        # сколько должна стоить акция для получения указанного профита
         elif len(message.text.split()) == 3 and '+' in message.text:
             count, price, profit = list(map(float, message.text.replace(',', '.').strip('+').split()))
-            # цена акции при игре на повышении для достижения указанного профита
-            result_up = round((profit*0.87 + count*price*1.003)/(count*1.003), 3)
-            # цена акции при игре на понижении для достижения указанного профита
-            result_down = round((count*price*1.003-profit*0.87)/(count*1.003), 3)
+            result = dev.price_out(count=count, p_in=price, profit=profit)
             bot.send_message(chat_id=message.chat.id,
                              text='Для достижения профита <b>%s</b>:\n'
                                   'Цена акции при игре на повышении: <b>%s</b>\n'
-                                  'Цена акции при игре на понижении: <b>%s</b>' % (profit, result_up, result_down),
+                                  'Цена акции при игре на понижении: <b>%s</b>' % (profit, result['up'], result['down']),
                              parse_mode='html')
     except Exception as e:
         print(e)
@@ -87,7 +86,7 @@ def send_query(query):
     wolf_khm = 'https://e7.pngegg.com/pngimages/874/681/png-clipart-leonardo-dicaprio-titanic-jack-dawson-actor-billy-costigan-leonardo-dicaprio-tshirt-celebrities-thumbnail.png'
     dollar = 'https://img2.freepng.ru/20180324/rse/kisspng-computer-icons-united-states-dollar-dollar-sign-do-dollar-5ab6e7e0a640e4.668921391521936352681.jpg'
     try:
-        if len(query.query.split()) == 3:
+        if len(query.query.split()) == 3 and '+' not in query.query:
             count, price_in, price_out = list(map(float, query.query.replace(',', '.').split()))
             result = dev.income(count=count, p_in=price_in, p_out=price_out)
             if price_out >= price_in:
@@ -122,7 +121,7 @@ def send_query(query):
                     thumb_width=48
                 )
                 bot.answer_inline_query(inline_query_id=query.id, results=[game_down, game_lose])
-        elif len(query.query.split() == 2):
+        elif len(query.query.split()) == 2:
             count, price = list(map(float, query.query.replace(',', '.').split()))
             result = round(count * price, 3)
             kom = round(count * price * 0.003, 3)
@@ -130,8 +129,9 @@ def send_query(query):
                 id='kom',
                 title='Сделка',
                 input_message_content=types.InputTextMessageContent(query.query),
-                description='Стоимость акций: <b>{0}</b> \n'
-                            'Комиссия за сделку: <b>{1}</b>'.format(str(result), str(kom)),
+                description='Стоимость акций: {0} \n'
+                            'Комиссия за сделку: {1} \n'
+                            'Итого: <b>{2}</b>'.format(str(result), str(kom), str(result+kom)),
                 thumb_url=wolf_khm,
                 thumb_height=48,
                 thumb_width=48
@@ -169,6 +169,20 @@ def send_query(query):
                     thumb_width=48
                 )
                 bot.answer_inline_query(inline_query_id=query.id, results=[r])
+        elif len(query.query.split()) == 3 and '+' in query.query:
+            count, price, profit = list(map(float, query.query.replace(',', '.').strip('+').split()))
+            result = dev.price_out(count=count, p_in=price, profit=profit)
+            r = types.InlineQueryResultArticle(
+                id='profit',
+                title='Профит ' + str(profit),
+                input_message_content=types.InputTextMessageContent(query.query),
+                description='Цена акции long: %s\n'
+                            'Цена акции short: %s' % (result['up'], result['down']),
+                thumb_url=wolf_khm,
+                thumb_height=48,
+                thumb_width=48
+            )
+            bot.answer_inline_query(inline_query_id=query.id, results=[r])
     except Exception as e:
         print(e)
 
