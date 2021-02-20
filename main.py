@@ -1,4 +1,4 @@
-import telebot
+import telebot, dev
 from telebot import types
 from pycbrf import ExchangeRates
 from datetime import date
@@ -16,28 +16,14 @@ def mode(message):
             bot.send_message(chat_id=message.chat.id, text=f.read(), parse_mode='html')
 
 
-def inv(count: float = 0, price_in: float = 0, price_out: float = 0) -> float:
-    """
-    :param count: количество акций
-    :param price_in: цена покупки 1 акции
-    :param price_out: цена продажи 1 акции
-    :return: количество денег на выходе при продаже с учетом комиссии 0.3%
-    """
-    kom_in, kom_out = price_in * count * 0.003, price_out * count * 0.003
-    return (((price_out - price_in) if price_out >= price_in else (price_in - price_out)) * count - (kom_in + kom_out)) * 0.87
-
-
-# print(str(inv(*list(map(float, sys.argv[1:])))))
-
-
 @bot.message_handler(content_types=['text'])
 def send(message):
     try:
         # подсчет прибыли или убытка при вводе 3х чисел:
         # (кол-во акций, цена покупки, цена продажи)
-        if len(message.text.split()) == 3:
+        if len(message.text.split()) == 3 and '+' not in message.text:
             count, price_in, price_out = list(map(float, message.text.replace(',', '.').split()))
-            result = round(inv(count, price_in, price_out), 3)
+            result = dev.income(count=count, p_in=price_in, p_out=price_out)
             if price_out >= price_in:
                 bot.send_message(chat_id=message.chat.id,
                                  text='Прибыль при игре на повышении: <b>' + str(result) + '</b>',
@@ -48,7 +34,7 @@ def send(message):
                                  text='Прибыль при игре на понижении: <b>' + str(abs(result)) + '</b>\n'
                                       'Убыток при пониженной цене: <b>' + str(lose_money) + '</b>\n',
                                  parse_mode='html')
-        # подсчет размера комиссии при вводе двух числе:
+        # подсчет размера комиссии при вводе двух чисел:
         # (кол-во акций, цена акции)
         elif len(message.text.split()) == 2:
             count, price = list(map(float, message.text.replace(',', '.').split()))
@@ -56,8 +42,7 @@ def send(message):
             kom = round(count * price * 0.003, 3)
             bot.send_message(chat_id=message.chat.id,
                              text='Стоимость акций: <b>{0}</b> \n'
-                                  'Комиссия за сделку: <b>{1}</b>\n'
-                                  'Итого: <b>{0} + {1} = {2}</b>'.format(str(result), str(kom), str(result+kom)),
+                                  'Комиссия за сделку: <b>{1}</b>'.format(str(result), str(kom)),
                              parse_mode='html')
         # ввод одного числа
         # 1) перевод долларов в рубли
@@ -79,6 +64,18 @@ def send(message):
                                       ' на понижении: <b>{2} ({3} %)</b>'.format(new_price_long, round(new_price_long * 100 / price_in - 100, 3),
                                                                                  new_price_short, round(new_price_short * 100 / price_in - 100, 3)),
                                  parse_mode='html')
+        #
+        elif len(message.text.split()) == 3 and '+' in message.text:
+            count, price, profit = list(map(float, message.text.replace(',', '.').strip('+').split()))
+            # цена акции при игре на повышении для достижения указанного профита
+            result_up = round((profit*0.87 + count*price*1.003)/(count*1.003), 3)
+            # цена акции при игре на понижении для достижения указанного профита
+            result_down = round((count*price*1.003-profit*0.87)/(count*1.003), 3)
+            bot.send_message(chat_id=message.chat.id,
+                             text='Для достижения профита <b>%s</b>:\n'
+                                  'Цена акции при игре на повышении: <b>%s</b>\n'
+                                  'Цена акции при игре на понижении: <b>%s</b>' % (profit, result_up, result_down),
+                             parse_mode='html')
     except Exception as e:
         print(e)
 
@@ -92,7 +89,7 @@ def send_query(query):
     try:
         if len(query.query.split()) == 3:
             count, price_in, price_out = list(map(float, query.query.replace(',', '.').split()))
-            result = round(inv(count, price_in, price_out), 3)
+            result = dev.income(count=count, p_in=price_in, p_out=price_out)
             if price_out >= price_in:
                 game_up = types.InlineQueryResultArticle(
                     id='1',
@@ -114,7 +111,7 @@ def send_query(query):
                     thumb_height=48,
                     thumb_width=48
                 )
-                lose_money = round((price_in - price_out + price_in * 0.003 + price_in * 0.003) * count, 3)
+                lose_money = dev.lose(count=count, p_in=price_in, p_out=price_out)
                 game_lose = types.InlineQueryResultArticle(
                     id='3',
                     title='Ебагул Лео продает в минус',
@@ -130,12 +127,11 @@ def send_query(query):
             result = round(count * price, 3)
             kom = round(count * price * 0.003, 3)
             r = types.InlineQueryResultArticle(
-                id = 'kom',
+                id='kom',
                 title='Сделка',
                 input_message_content=types.InputTextMessageContent(query.query),
                 description='Стоимость акций: <b>{0}</b> \n'
-                            'Комиссия за сделку: <b>{1}</b>\n'
-                            'Итого: <b>{0} + {1} = {2}</b>'.format(str(result), str(kom), str(result+kom)),
+                            'Комиссия за сделку: <b>{1}</b>'.format(str(result), str(kom)),
                 thumb_url=wolf_khm,
                 thumb_height=48,
                 thumb_width=48
