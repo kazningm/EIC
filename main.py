@@ -131,7 +131,7 @@ def send_query(query):
                 input_message_content=types.InputTextMessageContent(query.query),
                 description='Стоимость акций: {0} \n'
                             'Комиссия за сделку: {1} \n'
-                            'Итого: <b>{2}</b>'.format(str(result), str(kom), str(result+kom)),
+                            'Итого: {2}'.format(str(result), str(kom), str(result+kom)),
                 thumb_url=wolf_khm,
                 thumb_height=48,
                 thumb_width=48
