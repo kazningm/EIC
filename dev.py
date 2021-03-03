@@ -12,7 +12,8 @@ def income(count, p_in, p_out):
     else:
         res = (p_in - p_out - p_out * 0.003 - p_in * 0.003) * count
 
-    return round(res * 0.87 if res > 0 else res, 3)
+    # return round((res * 0.87) if res > 0 else res, 3)
+    return round(res * 0.87, 3)
 
 
 def lose(count, p_in, p_out):
